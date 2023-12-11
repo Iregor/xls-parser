@@ -1,5 +1,9 @@
 package com.store.demo;
 
+import com.store.demo.models.Attribute;
+import com.store.demo.models.Category;
+import com.store.demo.models.CategoryAttribute;
+import com.store.demo.models.ParsedData;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -9,11 +13,14 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.PriorityQueue;
+import java.util.*;
 
 public class XlsCategoryParser {
+    private final Set<Category> categorySet;
+    public XlsCategoryParser(ParsedData parsedData) {
+        categorySet = parsedData.getCategorySet();
+    }
+
     public List<Category> getCategories(String filePath) {
         List<Category> categories = new ArrayList<>();
         try (FileInputStream file = new FileInputStream(filePath)) {
@@ -85,7 +92,7 @@ public class XlsCategoryParser {
             leftColumnToParseHor = firstColumn + 1;
         }
         if (!data.isEmpty()) {
-            category = new Category(data, parentCategory, new ArrayList<>());
+            category = new Category(data, parentCategory);
             categories.add(category);
         } else {
             //if field is empty we skip it and go forth with previous parent category
@@ -117,8 +124,7 @@ public class XlsCategoryParser {
             if (cell == null || (data = cell.getStringCellValue()).isEmpty()) {
                 break;
             }
-            Attribute attribute = new Attribute(data, cell.getRowIndex() - 2);
-            category.getAttributes().add(attribute);
+            CategoryAttribute categoryAttribute = new CategoryAttribute(category, new Attribute(data), cell.getRowIndex() - 2);
         }
     }
 }

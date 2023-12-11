@@ -1,19 +1,19 @@
-package com.store.demo;
+package com.store.demo.models;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
 public class Category {
     private String name;
     private Category parentCategory;
-    private List<Attribute> attributes;
-
     public String getDescription() {
         StringBuilder fullNameDescription = new StringBuilder();
         Deque<String> deq = new ArrayDeque<>();
@@ -27,13 +27,12 @@ public class Category {
             fullNameDescription.append(deq.pollLast());
         }
 
-        StringBuilder attributesDescription = new StringBuilder();
-        for (Attribute attribute : attributes) {
-            attributesDescription.append(String.format("%d: %s \n", attribute.getPriority(), attribute.getName()));
-        }
+/*        StringBuilder attributesDescription = new StringBuilder();
+        for (CategoryAttribute categoryAttribute : categoryAttributes) {
+            attributesDescription.append(String.format("%d: %s \n", categoryAttribute.getPriority(), categoryAttribute.getAttribute().getName()));
+        }*/
 
 
-        return String.format("%s. Attribute list: \n%s",
-                fullNameDescription, attributesDescription);
+        return fullNameDescription.toString();
     }
 }
