@@ -2,12 +2,11 @@ package com.store.demo.models;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class Attribute {
+public class Sale {
     private Long id;
-    private String name;
+    private Model model;
+    private int percent;
 }

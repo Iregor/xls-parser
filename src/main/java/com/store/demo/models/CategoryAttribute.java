@@ -8,7 +8,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CategoryAttribute {
+    private Long id;
     private Category category;
     private Attribute attribute;
     private long priority;
+    private String attributeType;
 }

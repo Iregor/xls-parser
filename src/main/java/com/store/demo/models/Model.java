@@ -15,6 +15,4 @@ public class Model {
     private String description;
     private Long price;
     private Category category;
-//    private List<ModelImage> modelImages;
-//    private List<ModelAttribute> modelAttributes;
 }

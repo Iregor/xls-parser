@@ -1,9 +1,6 @@
 package com.store.demo;
 
-import com.store.demo.models.Attribute;
 import com.store.demo.models.Category;
-import com.store.demo.models.CategoryAttribute;
-import com.store.demo.models.ParsedData;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -13,30 +10,60 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.*;
 
 public class XlsCategoryParser {
-    private final Set<Category> categorySet;
+    private final Map<String, Category> categoryMap;
+
     public XlsCategoryParser(ParsedData parsedData) {
-        categorySet = parsedData.getCategorySet();
+        this.categoryMap = parsedData.getCategoryMap();
     }
 
-    public List<Category> getCategories(String filePath) {
-        List<Category> categories = new ArrayList<>();
-        try (FileInputStream file = new FileInputStream(filePath)) {
+    public void parseCategoriesData(Path path) throws IOException {
+        try (FileInputStream file = new FileInputStream(path.toFile())) {
             Workbook wb = new XSSFWorkbook(file);
-            Sheet sheet = wb.getSheetAt(0);
-            PriorityQueue<CellRangeAddress> cellAddressesQueue = getMergedRegionsInQueue(sheet);
-            int lastCategoryRow = 2;    //we know it with accepted data structure
-            int lastCategoryColumn = sheet.getRow(lastCategoryRow).getLastCellNum() - 1;
-            parseCategories(sheet,
-                    0, 0, lastCategoryRow, lastCategoryColumn,
-                    cellAddressesQueue, null, categories);
-            return categories;
-        } catch (IOException exc) {
-            System.out.println("Exception in reading file.");
+            Sheet categoryHierarchySheet = wb.getSheetAt(0);
+            Sheet categoryImagesSheet = wb.getSheetAt(1);
+            parseCategoryHierarchySheet(categoryHierarchySheet);
+            parseCategoryImagesSheet(categoryImagesSheet);
+            System.out.println("File parsed.");
         }
-        return categories;
+    }
+
+    private void parseCategoryHierarchySheet(Sheet sheet) {
+        PriorityQueue<CellRangeAddress> cellAddressesQueue = getMergedRegionsInQueue(sheet);
+        int lastCategoryRow = 2;    //we know it with accepted data structure
+        int lastCategoryColumn = sheet.getRow(lastCategoryRow).getLastCellNum() - 1;
+        parseCategories(sheet,
+                0, 0, lastCategoryRow, lastCategoryColumn,
+                cellAddressesQueue, null);
+    }
+
+    private void parseCategoryImagesSheet(Sheet sheet) {
+        //parsing would break if empty category name row arise
+        for (Row row : sheet) {
+            Cell categoryNameCell = row.getCell(0);
+            if (categoryNameCell == null) {
+                break;
+            }
+            String categoryName = categoryNameCell.getStringCellValue();
+            if (categoryName.isBlank()) {
+                break;
+            }
+
+            Cell linkCell = row.getCell(1);
+            if (linkCell == null) {
+                break;
+            }
+            String imageLink = linkCell.getStringCellValue();
+            Category category = categoryMap.get(categoryName);
+            if (category == null) {
+                System.out.printf("Category %s not found while parsing category image links.%n");
+            } else {
+                category.setImageLink(imageLink);
+            }
+        }
     }
 
     private PriorityQueue<CellRangeAddress> getMergedRegionsInQueue(Sheet sheet) {
@@ -47,19 +74,18 @@ public class XlsCategoryParser {
     }
 
     private void parseCategories(Sheet sheet,
-                                        int firstRow,
-                                        int firstColumn,
-                                        int lastRow,
-                                        int lastColumn,
-                                        PriorityQueue<CellRangeAddress> addressesQueue,
-                                        Category parentCategory,
-                                        List<Category> categories) {
+                                 int firstRow,
+                                 int firstColumn,
+                                 int lastRow,
+                                 int lastColumn,
+                                 PriorityQueue<CellRangeAddress> addressesQueue,
+                                 Category parentCategory) {
         //this method based on recursion algorithm firstly parsing down looking for childs,
         // and then parsing to the right looking for siblings
         if (firstRow > lastRow || firstColumn > lastColumn) {
             return; // here are recursion base occasion
         }
-        System.out.println("Parsing: " + firstRow + " " + firstColumn); //to track parsing story
+//        System.out.println("Parsing: " + firstRow + " " + firstColumn + " with parent: " + parentCategory); //to track parsing story
         Cell cell;
         Category category;
         String data;
@@ -86,45 +112,24 @@ public class XlsCategoryParser {
         } else {
             //region not found, now parse as cell
             cell = sheet.getRow(firstRow).getCell(firstColumn);
-            data = cell.getStringCellValue();
+            data = cell.getStringCellValue().trim();
             nextRowToParseBelow = firstRow + 1;
             rightColumnToParseBelow = firstColumn;
             leftColumnToParseHor = firstColumn + 1;
         }
         if (!data.isEmpty()) {
-            category = new Category(data, parentCategory);
-            categories.add(category);
+            category = new Category(null, data, parentCategory, null);
+            categoryMap.put(category.getName(), category);
         } else {
             //if field is empty we skip it and go forth with previous parent category
             category = parentCategory;
         }
         //parse below for child categories
         parseCategories(sheet, nextRowToParseBelow, firstColumn, lastRow, rightColumnToParseBelow,
-                addressesQueue, category, categories);
-
-        //here we try to parse Attributes if we are dealing with last category row
-        if (nextRowToParseBelow == 3) {
-            parseAttributes(sheet, category, nextRowToParseBelow, firstColumn);
-        }
+                addressesQueue, category);
 
         //now time to parse horizontally to the right for siblings
         parseCategories(sheet, firstRow, leftColumnToParseHor, lastRow, lastColumn,
-                addressesQueue, parentCategory, categories);
-    }
-
-    private void parseAttributes(Sheet sheet, Category category, int firstRow, int column) {
-        int lastRow = sheet.getLastRowNum();
-        for (int rowNum = firstRow; rowNum <= lastRow; rowNum++) {
-            Row row = sheet.getRow(rowNum);
-            if (row == null) {
-                break;
-            }
-            Cell cell = row.getCell(column);
-            String data;
-            if (cell == null || (data = cell.getStringCellValue()).isEmpty()) {
-                break;
-            }
-            CategoryAttribute categoryAttribute = new CategoryAttribute(category, new Attribute(data), cell.getRowIndex() - 2);
-        }
+                addressesQueue, parentCategory);
     }
 }

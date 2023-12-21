@@ -1,18 +1,17 @@
-package com.store.demo.models;
+package com.store.demo.dto;
 
+import io.micrometer.common.lang.Nullable;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Category {
-    private Long id;
+public class CategoryDto {
     private String name;
-    private Category parentCategory;
+
+    @Nullable
+    private Long parentCategoryId;
     private String imageLink;
 }

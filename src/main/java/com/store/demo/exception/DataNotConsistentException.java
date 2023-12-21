@@ -1,4 +1,4 @@
-package com.store.demo.models;
+package com.store.demo.exception;
 
 import java.io.IOException;
 
